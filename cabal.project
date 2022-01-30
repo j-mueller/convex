@@ -2,6 +2,7 @@
 index-state: 2022-01-25T00:00:00Z
 
 packages:
+  lib/convex-blockfrost-client
   lib/convex-node-client
   lib/convex-muesli-core
   lib/convex-muesli-data-export
