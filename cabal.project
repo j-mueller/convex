@@ -75,22 +75,6 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: https://github.com/input-output-hk/cardano-wallet
-  tag: 2fdc9a5aa44d8bc8bed0da74151ea1016fc30508
-  subdir:
-    lib/text-class
-    lib/strict-non-empty-containers
-    lib/core
-    lib/dbvar
-    lib/test-utils
-    lib/numeric
-    lib/launcher
-    lib/core-integration
-    lib/cli
-    lib/shelley
-
-source-repository-package
-  type: git
   location: https://github.com/input-output-hk/ouroboros-network
   tag: d2d219a86cda42787325bb8c20539a75c2667132
   subdir:
