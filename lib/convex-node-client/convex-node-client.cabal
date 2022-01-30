@@ -1,0 +1,63 @@
+cabal-version:      2.4
+name:               convex-node-client
+version:            0.1.0.0
+synopsis:           Conveniences for cardano-node clients
+bug-reports:        https://github.com/j-mueller/convex/issues
+license:            Apache-2.0
+author:             Jann Müller
+maintainer:         j-mueller@users.noreply.github.com
+category:           cardano
+
+common lang
+    default-language: Haskell2010
+    default-extensions: ExplicitForAll ScopedTypeVariables MultiParamTypeClasses
+                        DeriveGeneric StandaloneDeriving DeriveLift FlexibleContexts
+                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
+                        DeriveTraversable ImportQualifiedPost
+    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
+                 -Wincomplete-uni-patterns -Wincomplete-record-updates
+                 -Wredundant-constraints -Widentities
+
+library
+    import: lang
+    exposed-modules:
+        Convex.Event
+        Convex.Constants
+        Convex.NodeClient
+        Convex.NodeClient.Fold
+        Convex.NodeClient.Progress
+        Convex.NodeClient.Resuming
+        Convex.NodeClient.Types
+    hs-source-dirs: src
+    build-depends:
+        cardano-api -any,
+        cardano-ledger-alonzo -any,
+        cardano-ledger-core -any,
+        cardano-ledger-shelley-ma -any,
+        cardano-ledger-shelley -any,
+        cardano-slotting -any,
+        ouroboros-consensus -any,
+        ouroboros-consensus-byron -any,
+        ouroboros-consensus-shelley -any,
+        ouroboros-consensus-cardano -any,
+        ouroboros-network -any,
+        cardano-ledger-byron -any,
+        cardano-crypto-wrapper -any,
+        typed-protocols -any,
+        strict-containers -any
+    build-depends:
+        aeson >= 1.5.2,
+        base >=4.14 && <5,
+        text -any,
+        time -any,
+        bytestring -any,
+        transformers -any,
+        containers -any,
+        lens -any,
+        mtl -any
+
+executable convex-node-client
+    main-is:          Main.hs
+    build-depends:    base ^>=4.14.3.0, convex-node-client -any
+    hs-source-dirs:   app
+    default-language: Haskell2010
