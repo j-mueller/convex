@@ -25,7 +25,6 @@ library
         Convex.Muesli.Export.Config
         Convex.Muesli.Export.CSV
         Convex.Muesli.Export.NodeClient
-        Convex.Muesli.Export.Transaction
     hs-source-dirs: src
     build-depends:
         convex-node-client -any,
@@ -39,7 +38,6 @@ library
         containers -any,
         transformers -any,
         time -any,
-        aeson -any,
         text -any,
         optparse-applicative -any
 

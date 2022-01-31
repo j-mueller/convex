@@ -6,6 +6,7 @@ packages:
   lib/convex-node-client
   lib/convex-muesli-core
   lib/convex-muesli-data-export
+  lib/convex-prices
 
 constraints:
   -- newer versions of hashable define an instance Hashable (Set a).

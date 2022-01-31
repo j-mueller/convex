@@ -11,8 +11,8 @@ import Convex.NodeClient (CatchingUp (..), PipelinedLedgerStateClient, foldClien
 import GHC.IO.Handle (Handle)
 import Convex.Muesli.Constants qualified as Constants
 import Convex.Muesli.Export.CSV qualified as CSV
-import Convex.Muesli.Export.Transaction (StakingCredentials)
-import Convex.Muesli.Export.Transaction qualified as Transaction
+import Convex.Muesli.Transaction (StakingCredentials)
+import Convex.Muesli.Transaction qualified as Transaction
 
 exportClient ::
   StakingCredentials

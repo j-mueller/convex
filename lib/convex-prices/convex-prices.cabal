@@ -1,7 +1,7 @@
 cabal-version:      2.4
-name:               convex-muesli-core
+name:               convex-prices
 version:            0.1.0.0
-synopsis:           Types and functions for dealing with muesli orders
+synopsis:           Calculating the prices of cardano assets, and assorted statistics 
 bug-reports:        https://github.com/j-mueller/convex/issues
 license:            Apache-2.0
 author:             Jann Müller
@@ -21,32 +21,40 @@ common lang
 library
     import: lang
     exposed-modules:
-        Convex.Muesli.Constants
-        Convex.Muesli.KnownOrder
-        Convex.Muesli.Match
-        Convex.Muesli.Transaction
+        Convex.Prices.AssetPrices
+        Convex.Prices.Cli
+        Convex.Prices.Config
+        Convex.Prices.Measures
+        Convex.Prices.NodeClient
+        Convex.Prices.Webserver
+        Convex.Prices
     hs-source-dirs: src
     build-depends:
+        cardano-api -any
+    build-depends:
+        convex-muesli-core -any,
         convex-node-client -any
-    build-depends:
-        cardano-api -any,
-        cardano-slotting -any,
-        cardano-ledger-alonzo -any,
-        cardano-ledger-shelley -any,
-        cardano-ledger-core -any,
-        plutus-ledger -any,
-        plutus-ledger-api -any,
-        plutus-tx -any,
-        serialise -any,
-        cardano-binary -any
-    build-depends:
-        order-validator -any
     build-depends:
         base >=4.14 && <5,
         containers -any,
         text -any,
-        bytestring -any,
-        validation -any,
-        base16-bytestring -any,
         aeson -any,
-        time -any
+        lens -any,
+        time -any,
+        servant -any,
+        servant-server -any,
+        stm -any,
+        warp -any,
+        optparse-applicative -any,
+        transformers -any
+
+executable convex-prices
+    import: lang
+    main-is:          Main.hs
+    build-depends:
+        base ^>=4.14.3.0,
+        convex-prices
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:
+      -threaded -rtsopts -O2
