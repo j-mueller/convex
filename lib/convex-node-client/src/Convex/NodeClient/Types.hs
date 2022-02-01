@@ -24,9 +24,10 @@ import Cardano.Api qualified as CAPI
 import Cardano.Chain.Genesis qualified
 import Cardano.Crypto (ProtocolMagicId (unProtocolMagicId), RequiresNetworkMagic (..))
 import Cardano.Slotting.Slot (WithOrigin (At, Origin))
+import Control.Monad.Except (MonadError, throwError)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Trans.Class (lift)
-import Control.Monad.Trans.Except (ExceptT, withExceptT)
+import Control.Monad.Trans.Except (ExceptT, runExceptT)
 import Data.SOP.Strict (NP ((:*)))
 import Ouroboros.Consensus.Cardano.CanHardFork qualified as Consensus
 import Ouroboros.Consensus.HardFork.Combinator qualified as Consensus
@@ -43,9 +44,9 @@ newtype PipelinedLedgerStateClient =
 
 {-| Load the node config file and create 'LocalNodeConnectInfo' and 'Env' values that can be used to talk to the node.
 -}
-loadConnectInfo :: FilePath -> FilePath -> ExceptT InitialLedgerStateError IO (LocalNodeConnectInfo CardanoMode, Env)
+loadConnectInfo :: (MonadError InitialLedgerStateError m, MonadIO m) => FilePath -> FilePath -> m (LocalNodeConnectInfo CardanoMode, Env)
 loadConnectInfo nodeConfigFilePath socketPath = do
-  (env, _) <- withExceptT id (CAPI.initialLedgerState nodeConfigFilePath)
+  (env, _) <- liftIO (runExceptT (CAPI.initialLedgerState nodeConfigFilePath)) >>= either throwError pure
 
   -- Derive the NetworkId as described in network-magic.md from the
   -- cardano-ledger-specs repo.
