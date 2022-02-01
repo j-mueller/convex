@@ -9,6 +9,7 @@ module Convex.NodeClient.Types(
   PipelinedLedgerStateClient(..),
   ClientBlock,
   runNodeClient,
+  loadConnectInfo,
   -- * Sync points
   ChainPoint(..),
   fromChainTip
@@ -40,17 +41,11 @@ newtype PipelinedLedgerStateClient =
     { getPipelinedLedgerStateClient :: ChainSyncClientPipelined (BlockInMode CardanoMode) ChainPoint ChainTip IO ()
     }
 
-runNodeClient ::
-  FilePath
-  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
-  -> FilePath
-  -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
-  -> (LocalNodeConnectInfo CardanoMode -> Env -> IO PipelinedLedgerStateClient)
-  -- ^ Client
-  -> ExceptT InitialLedgerStateError IO ()
-  -- ^ The final state
-runNodeClient nodeConfigFilePath socketPath client = do
-  (env, _ledgerState) <- withExceptT id (CAPI.initialLedgerState nodeConfigFilePath)
+{-| Load the node config file and create 'LocalNodeConnectInfo' and 'Env' values that can be used to talk to the node.
+-}
+loadConnectInfo :: FilePath -> FilePath -> ExceptT InitialLedgerStateError IO (LocalNodeConnectInfo CardanoMode, Env)
+loadConnectInfo nodeConfigFilePath socketPath = do
+  (env, _) <- withExceptT id (CAPI.initialLedgerState nodeConfigFilePath)
 
   -- Derive the NetworkId as described in network-magic.md from the
   -- cardano-ledger-specs repo.
@@ -80,9 +75,20 @@ runNodeClient nodeConfigFilePath socketPath client = do
             localNodeNetworkId       = networkId,
             localNodeSocketPath      = socketPath
           }
+  pure (connectInfo, env)
 
+runNodeClient ::
+  FilePath
+  -- ^ Path to the cardano-node config file (e.g. <path to cardano-node project>/configuration/cardano/mainnet-config.json)
+  -> FilePath
+  -- ^ Path to local cardano-node socket. This is the path specified by the @--socket-path@ command line option when running the node.
+  -> (LocalNodeConnectInfo CardanoMode -> Env -> IO PipelinedLedgerStateClient)
+  -- ^ Client
+  -> ExceptT InitialLedgerStateError IO ()
+  -- ^ The final state
+runNodeClient nodeConfigFilePath socketPath client = do
+  (connectInfo, env) <- loadConnectInfo nodeConfigFilePath socketPath
   c <- liftIO (client connectInfo env)
-
   lift $ connectToLocalNode connectInfo (protocols c)
 
 protocols :: PipelinedLedgerStateClient -> LocalNodeClientProtocolsInMode CardanoMode
