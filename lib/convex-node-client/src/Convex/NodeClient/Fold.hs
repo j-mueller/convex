@@ -1,20 +1,22 @@
 {-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE TypeApplications   #-}
 {-| A node client that applies a fold to the stream of blocks.
 Unlike 'foldBlocks' from 'Cardano.Api', this one supports rollbacks.
 -}
 module Convex.NodeClient.Fold(
   CatchingUp(..),
-  foldClient
+  foldClient,
+  foldClient'
   ) where
 
 import Cardano.Api (Block (..), BlockHeader (..), BlockInMode (..), BlockNo (..), CardanoMode, ChainPoint (..),
                     ChainTip (..), Env, SlotNo, envSecurityParam)
 import Cardano.Slotting.Slot (WithOrigin (At))
+import Convex.NodeClient.Types (ClientBlock, PipelinedLedgerStateClient (..), fromChainTip)
 import Data.Sequence (Seq)
 import Data.Sequence qualified as Seq
-import Convex.NodeClient.Types (ClientBlock, PipelinedLedgerStateClient (..), fromChainTip)
 import Network.TypedProtocol.Pipelined (Nat (..))
 import Ouroboros.Consensus.Block.Abstract (WithOrigin (..))
 import Ouroboros.Network.Protocol.ChainSync.ClientPipelined (ClientPipelinedStIdle (..), ClientStNext (..))
@@ -36,20 +38,37 @@ foldClient ::
   Env -> -- ^ Node connection data
   (CatchingUp -> s -> BlockInMode CardanoMode -> IO (Maybe s)) -> -- ^ Fold
   PipelinedLedgerStateClient
-foldClient initialState env applyBlock = PipelinedLedgerStateClient $ CSP.ChainSyncClientPipelined $ do
+foldClient initialState env applyBlock =
+  foldClient' @s @()
+    initialState
+    env
+    (\_ _ s -> pure ((), s))
+    (\c s -> fmap (fmap pure) . applyBlock c s)
+
+{-| A variant of 'foldClient' that supports handling rollbacks. 
+-}
+foldClient' ::
+  forall s w.
+  Monoid w =>
+  s -> -- ^ Initial state
+  Env -> -- ^ Node connection data
+  (ChainPoint -> w -> s -> IO (w, s)) -> -- ^ Rollback
+  (CatchingUp -> s -> BlockInMode CardanoMode -> IO (Maybe (w, s))) -> -- ^ Fold
+  PipelinedLedgerStateClient
+foldClient' initialState env applyRollback applyBlock = PipelinedLedgerStateClient $ CSP.ChainSyncClientPipelined $ do
 
 -- NB: The code below was adapted from https://input-output-hk.github.io/cardano-node/cardano-api/src/Cardano.Api.LedgerState.html#foldBlocks
 
   let
     pipelineSize = 50 -- TODO: Configurable
 
-    initialHistory = initialStateHistory initialState
+    initialHistory = initialStateHistory (mempty, initialState)
 
     clientIdle_RequestMoreN
       :: forall n. WithOrigin BlockNo
       -> WithOrigin BlockNo
       -> Nat n -- Number of requests inflight.
-      -> History s
+      -> History (w, s)
       -> CSP.ClientPipelinedStIdle n ClientBlock ChainPoint ChainTip IO ()
     clientIdle_RequestMoreN clientTip serverTip n history
       = case pipelineDecisionMax pipelineSize n clientTip serverTip  of
@@ -59,7 +78,7 @@ foldClient initialState env applyBlock = PipelinedLedgerStateClient $ CSP.ChainS
 
     clientNextN
       :: Nat n
-      -> History s
+      -> History (w, s)
       -> ClientStNext n ClientBlock ChainPoint ChainTip IO ()
     clientNextN n history =
       ClientStNext {
@@ -70,8 +89,8 @@ foldClient initialState env applyBlock = PipelinedLedgerStateClient $ CSP.ChainS
                   cu = if newClientTip == newServerTip then CaughtUpWithNode else CatchingUpWithNode
                   currentState =
                     case Seq.viewl history of
-                      (_, x) Seq.:< _ -> x
-                      Seq.EmptyL      -> error "foldClient: clientNextN: Impossible - empty history!"
+                      (_, (_, x)) Seq.:< _ -> x
+                      Seq.EmptyL           -> error "foldClient: clientNextN: Impossible - empty history!"
 
               newState <- applyBlock cu currentState newBlock
               case newState of
@@ -85,10 +104,16 @@ foldClient initialState env applyBlock = PipelinedLedgerStateClient $ CSP.ChainS
             putStrLn $ "foldClient: Rolling back to" <> show chainPoint
             let newClientTip = Origin
                 newServerTip = fromChainTip serverChainTip
-                truncatedHistory = case chainPoint of
-                    ChainPointAtGenesis -> initialHistory
+                (rolledBack, truncatedHistory) = case chainPoint of
+                    ChainPointAtGenesis -> (Seq.empty, initialHistory)
                     ChainPoint slotNo _ -> rollbackStateHistory history slotNo
-            return (clientIdle_RequestMoreN newClientTip newServerTip n truncatedHistory)
+                (lastSlotNo, currentState) =
+                    case Seq.viewl truncatedHistory of
+                      (n', (_, x)) Seq.:< _ -> (n', x)
+                      Seq.EmptyL      -> error "foldClient: clientNextN: Impossible - empty history after rollback!"
+            !rolledBackState <- applyRollback chainPoint (foldMap (fst . snd) rolledBack) currentState
+            let (newHistory, _) = pushHistoryState env truncatedHistory lastSlotNo rolledBackState
+            return (clientIdle_RequestMoreN newClientTip newServerTip n newHistory)
         }
 
     clientIdle_DoneN
@@ -131,8 +156,10 @@ pushHistoryState env hist ix st
       (fromIntegral $ envSecurityParam env + 1)
       ((ix, st) Seq.:<| hist)
 
-rollbackStateHistory :: History a -> SlotNo -> History a
-rollbackStateHistory hist maxInc = Seq.dropWhileL ((> maxInc) . (\(x,_) -> x)) hist
+-- | Split the history into bits that have been rolled back (1st elemnt) and
+--   bits that have not been rolled back (2nd element)
+rollbackStateHistory :: History a -> SlotNo -> (History a, History a)
+rollbackStateHistory hist maxInc = Seq.spanl ((> maxInc) . (\(x,_) -> x)) hist
 
 initialStateHistory :: a -> History a
 initialStateHistory a = Seq.singleton (0, a)
