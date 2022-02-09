@@ -7,6 +7,7 @@ Libraries for working with `cardano-node` and with the [MuesliSwap](https://gith
 * [`convex-node-client`](lib/convex-node-client/README.md) - Conveniences for cardano-node clients
 * [`convex-blockfrost-client`](lib/convex-blockfrost-client/README.md) - Bindings to blockfrost's submit endpoint
 * [`convex-prices`](lib/convex-prices/README.md) - HTTP API for asset prices
+* [`convex-options`](lib/convex-options/README.md) - Plutus implementation of [option](https://en.wikipedia.org/wiki/Option_(finance)) contracts.
 
 ## Contributing
 
