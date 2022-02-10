@@ -19,7 +19,7 @@ module Convex.Options.OnChain.Option(
   OptionType
   ) where
 
-import Convex.Options.OnChain.Types (Option (..), OptionParam (..), OptionRedeemer (..), OptionState (..),
+import Convex.Options.OnChain.Types (Option (..), OptionInstance (..), OptionRedeemer (..), OptionState (..),
                                      exerciseInterval, optionValueLocked, reclaimInterval)
 import Ledger (CurrencySymbol, ScriptContext (..), TokenName, TxInfo (..), TxOut (..), Value)
 import Ledger.Typed.Scripts qualified as Scripts
@@ -31,15 +31,16 @@ import PlutusTx qualified
 import PlutusTx.Prelude
 
 {-# INLINABLE optionContract #-}
-optionContract :: OptionParam -> OptionRedeemer -> ScriptContext -> Bool
-optionContract OptionParam{oppOption, oppCurrency, oppState} redeemer context =
+optionContract :: OptionInstance -> OptionRedeemer -> ScriptContext -> Bool
+optionContract OptionInstance{oppOption, oppCurrency, oppState} redeemer context =
   let ScriptContext txInfo _ = context
       vs = C.valueSpent txInfo
       TxInfo{txInfoValidRange} = txInfo
   in case (oppState, redeemer, C.getContinuingOutputs context) of
     (Ready, Exercise, [TxOut{txOutValue, txOutDatumHash=Just dh}]) ->
-      let newDatum = Datum (PlutusTx.toBuiltinData OptionParam{oppOption, oppCurrency, oppState = Exercised})
-      in txOutValue == optionValueLocked Exercised oppOption
+      let newInstance = OptionInstance{oppOption, oppCurrency, oppState = Exercised}
+          newDatum = Datum (PlutusTx.toBuiltinData newInstance)
+      in txOutValue == optionValueLocked newInstance
           && hasToken oppCurrency (opBuyerTN oppOption) vs
           && C.findDatumHash newDatum txInfo == Just dh
           && exerciseInterval oppOption `Interval.contains` txInfoValidRange
@@ -54,5 +55,5 @@ hasToken cs tn vl = V.valueOf vl cs tn == 1
 data OptionType
 
 instance Scripts.ValidatorTypes OptionType where
-  type instance DatumType OptionType = OptionParam
+  type instance DatumType OptionType = OptionInstance
   type instance RedeemerType OptionType = OptionRedeemer

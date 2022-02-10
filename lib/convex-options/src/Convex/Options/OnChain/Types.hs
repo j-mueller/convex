@@ -14,7 +14,7 @@
 module Convex.Options.OnChain.Types(
   OptionType(..),
   Option(..),
-  OptionParam(..),
+  OptionInstance(..),
   OptionRedeemer(..),
   OptionState(..),
   MPSRedeemer(..),
@@ -59,22 +59,25 @@ data Option =
     , opRedemptionPeriod :: !Integer -- ^ Time (in milliseconds) that can pass after 'opDate' before the seller of the option can reclaim the output.
     , opBuyerTN          :: !TokenName -- ^ Token name for the BUYER token
     , opSellerTN         :: !TokenName -- ^ Token name for the SELLER token
+    , opUtxoTN           :: !TokenName -- ^ Token name for the UTXO marker
     }
     deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
 
 PlutusTx.makeLift ''Option
 PlutusTx.makeIsDataIndexed ''Option [('Option,0)]
 
-data OptionParam =
-  OptionParam
-    { oppOption   :: !Option
-    , oppState    :: !OptionState
-    , oppCurrency :: !CurrencySymbol
+{-| Option that can be traded.
+-}
+data OptionInstance =
+  OptionInstance
+    { oppOption   :: !Option -- ^ Definition of the option
+    , oppState    :: !OptionState -- ^ Current state
+    , oppCurrency :: !CurrencySymbol -- ^ Currency symbol of the buyer and seller tokens
     }
     deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
 
-PlutusTx.makeLift ''OptionParam
-PlutusTx.makeIsDataIndexed ''OptionParam [('OptionParam,0)]
+PlutusTx.makeLift ''OptionInstance
+PlutusTx.makeIsDataIndexed ''OptionInstance [('OptionInstance,0)]
 
 {-| Value that must be locked in the option output, *excluding*
 the minimum deposit!
@@ -87,9 +90,9 @@ optionValue Ready Option{opType=Call, opAsset, opAmount}    = V.assetClassValue 
 optionValue Exercised Option{opType=Call, opStrikePrice}    = Ada.toValue opStrikePrice
 
 {-# INLINABLE initialParam #-}
-initialParam :: CurrencySymbol -> Option -> OptionParam
+initialParam :: CurrencySymbol -> Option -> OptionInstance
 initialParam oppCurrency oppOption =
-  OptionParam
+  OptionInstance
     { oppOption
     , oppCurrency
     , oppState = Ready
@@ -98,8 +101,12 @@ initialParam oppCurrency oppOption =
 {-| Value that must be locked by the option output.
 -}
 {-# INLINABLE optionValueLocked #-}
-optionValueLocked :: OptionState -> Option -> Value
-optionValueLocked s o@Option{opDeposit} = Ada.toValue opDeposit <> optionValue s o
+optionValueLocked :: OptionInstance -> Value
+optionValueLocked OptionInstance{oppCurrency, oppState, oppOption} =
+  let Option{opDeposit, opUtxoTN} = oppOption
+  in Ada.toValue opDeposit
+      <> V.singleton oppCurrency opUtxoTN 1
+      <> optionValue oppState oppOption
 
 {-# INLINABLE exerciseInterval #-}
 exerciseInterval :: Option -> POSIXTimeRange

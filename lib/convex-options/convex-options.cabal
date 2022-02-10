@@ -41,3 +41,19 @@ library
         cooked-validators -any
     ghc-options: -fobject-code -fno-ignore-interface-pragmas -fno-omit-interface-pragmas -fno-specialise
 
+test-suite convex-options-test
+  import:               lang
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:     test
+  other-modules:
+    Convex.Options.Generators
+    Convex.Options.Test
+  build-depends:
+    base >=4.14 && <5
+    , tasty -any
+    , convex-options -any
+    , plutus-ledger-api -any
+    , tasty-quickcheck -any
+    , cooked-validators -any
+    , QuickCheck -any

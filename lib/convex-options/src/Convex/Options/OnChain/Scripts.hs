@@ -26,7 +26,7 @@ import Codec.Serialise
 import Convex.Options.OnChain.MintingPolicy qualified as MPS
 import Convex.Options.OnChain.Option (OptionType)
 import Convex.Options.OnChain.Option qualified as Option
-import Convex.Options.OnChain.Types (Option, OptionParam, OptionRedeemer)
+import Convex.Options.OnChain.Types (Option, OptionInstance, OptionRedeemer)
 import Data.ByteString.Lazy qualified as LB
 import Data.ByteString.Short qualified as SBS
 import Ledger hiding (singleton)
@@ -40,7 +40,7 @@ typedValidator = Scripts.mkTypedValidator @OptionType
     $$(PlutusTx.compile [|| Option.optionContract ||])
     $$(PlutusTx.compile [|| wrap ||])
   where
-    wrap = Scripts.wrapValidator @OptionParam @OptionRedeemer
+    wrap = Scripts.wrapValidator @OptionInstance @OptionRedeemer
 
 optionValidator :: Validator
 optionValidator = Scripts.validatorScript typedValidator
