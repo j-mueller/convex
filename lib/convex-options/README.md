@@ -13,7 +13,7 @@ This fact can be used to build an AMM style liquidity pool.
 
 TODO:
 
-[ ] tests
-[ ] pricing
-[ ] node client
-[ ] think about AMM / liquidity (planned for v2)
+- [ ] more tests
+- [ ] pricing
+- [ ] node client
+- [ ] think about AMM / liquidity (planned for v2)
