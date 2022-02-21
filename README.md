@@ -13,4 +13,4 @@ Libraries for working with `cardano-node` and with the [MuesliSwap](https://gith
 
 Contributions and bug reports are always welcome!
 
-Join the [discord](https://discord.gg/9UuqgQgn) server!
+Join the [discord](https://discord.gg/bcrREvUdns) server!
