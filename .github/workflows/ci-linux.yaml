@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: build convex-muesli-core convex-muesli-data-export convex-node-client convex-options convex-prices
-        run: cabal build -j build convex-muesli-core convex-muesli-data-export convex-node-client convex-options convex-prices
+        run: cabal build -j convex-muesli-core convex-muesli-data-export convex-node-client convex-options convex-prices
 
       - name: run convex-options-test
         run: cabal run convex-options-test
