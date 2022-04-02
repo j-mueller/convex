@@ -125,7 +125,7 @@ source-repository-package
 
 source-repository-package
   type: git
-  location: git@github.com:input-output-hk/plutus-apps.git
+  location: https://github.com/input-output-hk/plutus-apps.git
   tag: v2022-04-06
   subdir:
     freer-extras
