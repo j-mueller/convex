@@ -33,11 +33,9 @@ library
         cardano-api -any,
         cardano-ledger-alonzo -any,
         cardano-ledger-core -any,
-        cardano-ledger-shelley-ma -any,
         cardano-ledger-shelley -any,
         cardano-slotting -any,
         ouroboros-consensus -any,
-        ouroboros-consensus-byron -any,
         ouroboros-consensus-shelley -any,
         ouroboros-consensus-cardano -any,
         ouroboros-network -any,
@@ -50,14 +48,6 @@ library
         base >=4.14 && <5,
         text -any,
         time -any,
-        bytestring -any,
         transformers -any,
         containers -any,
-        lens -any,
         mtl -any
-
-executable convex-node-client
-    main-is:          Main.hs
-    build-depends:    base ^>=4.14.3.0, convex-node-client -any
-    hs-source-dirs:   app
-    default-language: Haskell2010
