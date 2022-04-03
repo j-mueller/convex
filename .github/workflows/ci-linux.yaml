@@ -21,23 +21,24 @@ jobs:
         id: libsodium
         uses: actions/cache@v2
         with:
-          path: ~/libsodium-stable
+          path: ~/libsodium
           key: ${{ runner.os }}-libsodium-1.0.18
 
       # install libsodium with cache
       - name: Install cache libsodium-1.0.18
         if: steps.libsodium.outputs.cache-hit == 'true'
-        run: cd ~/libsodium-stable && ./configure && make -j2 && sudo make install
+        run: cd ~/libsodium && ./configure && make -j2 && sudo make install
 
       # download & install libsodium without cache
       - name: Install libsodium
         if: steps.libsodium.outputs.cache-hit != 'true'
         run: |
-          wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.18-stable.tar.gz
-          tar -xvzf libsodium-1.0.18-stable.tar.gz -C ~
-          cd ~/libsodium-stable
+          cd ~
+          git clone https://github.com/input-output-hk/libsodium
+          cd libsodium
+          ./autogen.sh
           ./configure
-          make -j2 && make check
+          make
           sudo make install
           cd -
 
