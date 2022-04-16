@@ -1,4 +1,5 @@
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE TypeApplications #-}
 {-| Some off-chain code for creating and exercising options
 -}
 module Convex.Options.OffChain(
@@ -13,6 +14,7 @@ import Convex.Options.OnChain.Types (MPSRedeemer (..), Option (..), OptionInstan
                                      reclaimInterval)
 import Cooked.MockChain.Monad (MonadBlockChain (..), pkUtxos, scriptUtxosSuchThat, validateTxConstrLbl)
 import Cooked.Tx.Constraints qualified as C
+import Data.Void (Void)
 import Ledger (AssetClass, Value)
 import Ledger.Value qualified as Value
 
@@ -43,13 +45,16 @@ initialise option = do
   let (utxo, _) = oref
       param = initialParam (Scripts.mintingPolicySymbol option utxo) option
       vl = optionValueLocked param
-      constraints =
+      misc =
         [ C.Mints (Just MPSMinting) [Scripts.mintingPolicy option utxo] (mintValue param)
-        , C.PaysScript Scripts.typedValidator [(param, vl)]
         , C.SpendsPK oref
         , C.SignedBy [pkh]
-        , C.PaysPK pkh (buyerSellerTokens param)
         ]
+      outConstraints =
+        [ C.PaysScript Scripts.typedValidator param vl
+        , C.PaysPKWithDatum @Void pkh Nothing Nothing (buyerSellerTokens param)
+        ]
+      constraints = misc C.:=>: outConstraints
   _ <- validateTxConstrLbl InitialiseTx constraints
   pure param
 
@@ -62,12 +67,15 @@ exercise inst@OptionInstance{oppOption=option@Option{opUtxoTN}, oppCurrency} = d
     [(spendableOut, _)] -> do
       let newState = inst{oppState = Exercised}
           newVal   = optionValueLocked newState
-          constraints =
-            [ C.PaysScript Scripts.typedValidator [(newState, newVal)]
-            , C.SpendsScript Scripts.typedValidator Exercise (spendableOut, inst)
-            , C.PaysPK pkh (buyerSellerTokens inst)
+          misc =
+            [ C.SpendsScript Scripts.typedValidator Exercise (spendableOut, inst)
             , C.ValidateIn (exerciseInterval option)
             ]
+          outConstraints =
+            [ C.PaysScript Scripts.typedValidator newState newVal
+            , C.PaysPKWithDatum @Void pkh Nothing Nothing (buyerSellerTokens inst)
+            ]
+          constraints = misc C.:=>: outConstraints
       _ <- validateTxConstrLbl ExerciseTx constraints
       pure newState
     _ -> fail "Failed to find UTXO"
@@ -79,11 +87,13 @@ reclaim inst@OptionInstance{oppOption=option@Option{opUtxoTN}, oppCurrency} = do
   utxos <- scriptUtxosSuchThat Scripts.typedValidator (\_ vl -> Value.assetClassValueOf vl ac == 1)
   case utxos of
     [(spendableOut, _)] -> do
-      let constraints =
+      let misc =
             [ C.SpendsScript Scripts.typedValidator Reclaim (spendableOut, inst)
-            , C.PaysPK pkh (buyerSellerTokens inst)
             , C.ValidateIn (reclaimInterval option)
             ]
-      _ <- validateTxConstrLbl ReclaimTx constraints
+          outConstraints =
+            [ C.PaysPKWithDatum @Void pkh Nothing Nothing (buyerSellerTokens inst)
+            ]
+      _ <- validateTxConstrLbl ReclaimTx (misc C.:=>: outConstraints)
       pure ()
     _ -> fail "Failed to find UTXO"
