@@ -1,0 +1,82 @@
+cabal-version:      2.4
+name:               convex-app-wallet
+version:            0.1.0.0
+
+synopsis:           A simple wallet aimed at supporting high throughput apps
+bug-reports:        https://github.com/j-mueller/convex/issues
+license:            Apache-2.0
+author:             Jann Müller
+maintainer:         j-mueller@users.noreply.github.com
+category:           cardano
+
+common lang
+    default-language: Haskell2010
+    default-extensions: ExplicitForAll ScopedTypeVariables MultiParamTypeClasses
+                        DeriveGeneric StandaloneDeriving DeriveLift FlexibleContexts
+                        GeneralizedNewtypeDeriving DeriveFunctor DeriveFoldable
+                        DeriveTraversable ImportQualifiedPost
+    ghc-options: -Wall -Wnoncanonical-monad-instances -Wunused-packages
+                 -Wincomplete-uni-patterns -Wincomplete-record-updates
+                 -Wredundant-constraints -Widentities
+
+library
+    import: lang
+    exposed-modules:
+        Convex.Wallet.Cli
+        Convex.Wallet.Command
+        Convex.Wallet.Config
+        Convex.Wallet.ExportTx
+        Convex.Wallet.NodeClient
+        Convex.Wallet.Stats
+        Convex.Wallet.Transaction
+        Convex.Wallet.Types
+        Convex.Wallet.Utils
+        Convex.Wallet.Utxos
+        Convex.Wallet.Webserver
+    hs-source-dirs: src
+    build-depends:
+        convex-node-client -any
+    build-depends:
+        cardano-api -any,
+        cardano-slotting -any,
+        ouroboros-consensus -any,
+        ouroboros-consensus-shelley -any,
+        ouroboros-network -any,
+        cardano-ledger-alonzo -any,
+        cardano-ledger-core -any,
+        cardano-wallet-core -any,
+        plutus-ledger-api -any,
+        text-class -any,
+        strict-containers -any
+    build-depends:
+        base >=4.14 && <5,
+        containers -any,
+        text -any,
+        optparse-applicative -any,
+        aeson -any,
+        bytestring -any,
+        lens -any,
+        mtl -any,
+        servant-client -any,
+        http-client -any,
+        servant-client-core -any,
+        wreq -any,
+        fingertree -any,
+        stm -any,
+        servant-server -any,
+        formatn >= 0.1.0,
+        http-types -any,
+        validation -any,
+        transformers -any,
+        warp -any
+
+executable convex-app-wallet
+    import: lang
+    main-is:          Main.hs
+    build-depends:
+        base ^>=4.14.3.0,
+        convex-app-wallet
+    hs-source-dirs:   app
+    default-language: Haskell2010
+    ghc-options:
+      -threaded -rtsopts -O2
