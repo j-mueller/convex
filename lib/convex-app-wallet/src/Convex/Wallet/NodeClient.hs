@@ -11,7 +11,7 @@ module Convex.Wallet.NodeClient(
   walletClient
   ) where
 
-import Cardano.Api (Block (..), BlockInMode (..), CardanoMode, Env)
+import Cardano.Api (Block (..), BlockInMode (..), CardanoMode, Env, TxBodyContent, BuildTx, AlonzoEra)
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad ((>=>))
@@ -21,7 +21,6 @@ import Control.Monad.Trans.Maybe (runMaybeT)
 import Control.Monad.Trans.State.Strict (execStateT)
 import Control.Monad.Writer (MonadWriter, runWriterT)
 import Convex.NodeClient (PipelinedLedgerStateClient, foldClient')
-import Convex.Wallet.ExportTx (ExportTx)
 import Convex.Wallet.Stats (Stats, WalletStats)
 import Convex.Wallet.Stats qualified as Stats
 import Convex.Wallet.Transaction (TxQueueState, TxRequestId, emptyTxQueueState, enqueueTx, processSpentTxIn,
@@ -34,7 +33,7 @@ import Convex.Wallet.Utxos qualified as Utxos
 import Data.Foldable (traverse_)
 import Data.Sequence (Seq)
 
-type Delta = Seq (TxRequestId, ExportTx)
+type Delta = Seq (TxRequestId, TxBodyContent BuildTx AlonzoEra)
 
 data WalletState =
   WalletState
@@ -79,7 +78,7 @@ rollforwardWallet UtxoState{} delta block = do
 
   -- add new user submitted transactions
   traverse_ (uncurry enqueueTx) delta
-  
+
   -- process all inputs that were spent by the current block
   traverse_ (uncurry processSpentTxIn >=> traverse_ processTxInSpentEvent) (U.spentTxIns block)
 

@@ -6,6 +6,8 @@
 {-# LANGUAGE TypeApplications   #-}
 module Convex.Wallet.ExportTx(
   ExportTx(..),
+  ExportTxInput(..),
+  ExportTxRedeemer(..),
   -- * Constructing inputs and outputs
   redeemWith,
   input

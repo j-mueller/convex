@@ -29,14 +29,13 @@ import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo.TxBody
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.TxIn qualified as CT
 import Control.Lens (makeLenses, makePrisms)
+import Convex.Wallet.Utils (TxOut)
 import Data.Bifunctor (Bifunctor (..))
 import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (mapMaybe)
 import Data.Set qualified as Set
-
-type TxOut = Alonzo.TxBody.TxOut (Alonzo.AlonzoEra StandardCrypto)
 
 {-| The UTXOs currently available to the wallet
 -}
