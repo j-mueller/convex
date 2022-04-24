@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE TemplateHaskell    #-}
@@ -11,7 +12,7 @@ module Convex.Wallet.NodeClient(
   walletClient
   ) where
 
-import Cardano.Api (Block (..), BlockInMode (..), CardanoMode, Env, TxBodyContent, BuildTx, AlonzoEra)
+import Cardano.Api (AlonzoEra, Block (..), BlockInMode (..), BuildTx, CardanoMode, Env, TxBodyContent)
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad ((>=>))
@@ -23,8 +24,8 @@ import Control.Monad.Writer (MonadWriter, runWriterT)
 import Convex.NodeClient (PipelinedLedgerStateClient, foldClient')
 import Convex.Wallet.Stats (Stats, WalletStats)
 import Convex.Wallet.Stats qualified as Stats
-import Convex.Wallet.Transaction (TxQueueState, TxRequestId, emptyTxQueueState, enqueueTx, processSpentTxIn,
-                                  processTxInSpentEvent)
+import Convex.Wallet.Transaction (PartialTx, TxBodyState (..), TxQueueState, TxRequestId, emptyTxQueueState, enqueueTx,
+                                  processSpentTxIn, processTxInSpentEvent)
 import Convex.Wallet.Types (Wallet)
 import Convex.Wallet.Types qualified as Wallet
 import Convex.Wallet.Utils qualified as U
@@ -33,7 +34,7 @@ import Convex.Wallet.Utxos qualified as Utxos
 import Data.Foldable (traverse_)
 import Data.Sequence (Seq)
 
-type Delta = Seq (TxRequestId, TxBodyContent BuildTx AlonzoEra)
+type Delta = Seq (TxRequestId, PartialTx Unbalanced)
 
 data WalletState =
   WalletState
