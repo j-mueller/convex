@@ -189,12 +189,10 @@ addAdaOnlyTxInput (txIn, txOut) ptx =
       & addLogEntry (AddCollateral txIn)
       & utxoL . at txIn ?~ txOut
 
-addTxInputsToCoverBalance :: [(TxIn, Utils.TxOut)] -> PartialTx AdaOnlyBalance -> Either FailureReason (PartialTx AdaOnlyBalance)
-addTxInputsToCoverBalance _ ptx@PartialTx{ptxBalance=TxBodyBalanceAdaOnly lovelace} | lovelace >= 0 = Right ptx
-addTxInputsToCoverBalance (x:xs) ptx =
-  let ptx' = addAdaOnlyTxInput x ptx
-  in addTxInputsToCoverBalance xs ptx'
-addTxInputsToCoverBalance [] PartialTx{ptxBalance=TxBodyBalanceAdaOnly lovelace} = Left (NotEnoughInputsForBalance lovelace)
+addTxInputsToCoverBalance :: [(TxIn, Utils.TxOut)] -> PartialTx AdaOnlyBalance -> [PartialTx AdaOnlyBalance]
+addTxInputsToCoverBalance txIns bd =
+  filter ((>= 0) . view adaBalanceL)
+  $ scanl (\bd' x -> addAdaOnlyTxInput x bd') bd txIns
 
 {-| Network information (available from cardano node)
 -- TODO: NodeEnv -> IO BalanceTxNodeEnv
@@ -304,8 +302,9 @@ processTxInSpentEvent TxInSpentEvent{tseTxIn, tseRequestId, tseSpendingTx} = do
 -}
 data BalanceTxResult =
   EmptyQueue -- ^ No transactions in queue
-  | NotEnoughUTXOs -- ^ Not enough UTXOs to balance the transaction
-  | BalancedTx (PartialTx Balanced) -- ^ Transaction was dequeued and balanced
+  | NotEnoughUTXOs TxRequestId -- ^ Not enough UTXOs to balance the transaction
+  | BalancingFailed TxRequestId -- ^ Balancing failed :(
+  | BalancedTx TxRequestId (PartialTx Balanced) -- ^ Transaction was dequeued and balanced
 
 {-| Return the UTXOs that can be used for balancing a transaction.
 The UTXOs are
@@ -325,11 +324,11 @@ availableUtxos UtxoState{_walletUtxos} = do
 {-| Dequeue the first transaction and try to balance it.
 -}
 balanceTx :: MonadState TxQueueState m => Wallet -> UtxoState -> BalanceTxNodeEnv -> m BalanceTxResult
-balanceTx wallet@Wallet{wNonAdaReturnAddress} utxoState BalanceTxNodeEnv{bteParams, bteNetworkId, bteActivePools} = gets (Seq.viewl . _queuedTransactions) >>= \case
+balanceTx wallet@Wallet{wNonAdaReturnAddress} utxoState env@BalanceTxNodeEnv{bteParams, bteNetworkId, bteActivePools} = gets (Seq.viewl . _queuedTransactions) >>= \case
   (requestId, exportTx) Seq.:< rest -> do
     utxos_ <- availableUtxos utxoState
     case utxos_ of
-      [] -> pure NotEnoughUTXOs
+      [] -> pure (NotEnoughUTXOs requestId)
       (x:xs) -> do
         let wipTx = startBalancing exportTx
             txWithProtocolParams = over bodyContentL (Utils.setProtocolParams bteParams) wipTx
@@ -355,9 +354,13 @@ balanceTx wallet@Wallet{wNonAdaReturnAddress} utxoState BalanceTxNodeEnv{btePara
             candidatesWithNonAdaChangeAdded = rights $ addNonAdaChangeOutput wNonAdaReturnAddress <$> candidatesWithBal
 
             -- now select ada inputs until the balance is positive
-            candidatesWithInputs = rights $ addTxInputsToCoverBalance (x:xs) <$> candidatesWithNonAdaChangeAdded
-
+            -- TODO: We could potentially improve the order of the generated candidates by using the logict package.
+            -- So that we could interleave candidates based on cand0 with those based on cand1.
+            -- By using [] we will generate all candidates for cand0 first.
+            candidatesWithInputs = candidatesWithNonAdaChangeAdded >>= addTxInputsToCoverBalance (x:xs)
 
         -- try to balance the candidates until we find one that works
-        undefined
+        case rights (balanceTxBody env wallet <$> candidatesWithInputs) of
+          [] -> return (BalancingFailed requestId)
+          x:_ -> undefined -- TODO: Add signature
   Seq.EmptyL -> pure EmptyQueue
