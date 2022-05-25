@@ -267,7 +267,7 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/tweag/plutus-libs
-  tag: 04f8e7051ef41f3a3860bacd178704273b6aa29b
+  tag: f1b8b3e3b5b5c24502e1fd246e4166ecd6fdbcff
   subdir:
     cooked-validators
 

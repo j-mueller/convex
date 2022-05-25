@@ -1,5 +1,6 @@
-{-# LANGUAGE NamedFieldPuns   #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE TypeApplications   #-}
 {-| Some off-chain code for creating and exercising options
 -}
 module Convex.Options.OffChain(
@@ -13,13 +14,13 @@ import Convex.Options.OnChain.Types (MPSRedeemer (..), Option (..), OptionInstan
                                      OptionState (..), exerciseInterval, initialParam, optionValueLocked,
                                      reclaimInterval)
 import Cooked.MockChain.Monad (MonadBlockChain (..), pkUtxos, scriptUtxosSuchThat, validateTxConstrLbl)
+import Cooked.MockChain.Wallet qualified as W
 import Cooked.Tx.Constraints qualified as C
-import Data.Void (Void)
 import Ledger (AssetClass, Value)
 import Ledger.Value qualified as Value
 
 data OptionLbl = InitialiseTx | ExerciseTx | ReclaimTx
-  deriving Show
+  deriving stock (Show, Eq)
 
 buyerSellerTokens :: OptionInstance -> Value
 buyerSellerTokens OptionInstance{oppOption=Option{opBuyerTN, opSellerTN}, oppCurrency} =
@@ -52,7 +53,7 @@ initialise option = do
         ]
       outConstraints =
         [ C.PaysScript Scripts.typedValidator param vl
-        , C.PaysPKWithDatum @Void pkh Nothing Nothing (buyerSellerTokens param)
+        , C.PaysPKWithDatum @() pkh Nothing Nothing (buyerSellerTokens param <> W.minAda)
         ]
       constraints = misc C.:=>: outConstraints
   _ <- validateTxConstrLbl InitialiseTx constraints
@@ -73,7 +74,7 @@ exercise inst@OptionInstance{oppOption=option@Option{opUtxoTN}, oppCurrency} = d
             ]
           outConstraints =
             [ C.PaysScript Scripts.typedValidator newState newVal
-            , C.PaysPKWithDatum @Void pkh Nothing Nothing (buyerSellerTokens inst)
+            , C.PaysPKWithDatum @() pkh Nothing Nothing (buyerSellerTokens inst <> W.minAda)
             ]
           constraints = misc C.:=>: outConstraints
       _ <- validateTxConstrLbl ExerciseTx constraints
@@ -92,7 +93,7 @@ reclaim inst@OptionInstance{oppOption=option@Option{opUtxoTN}, oppCurrency} = do
             , C.ValidateIn (reclaimInterval option)
             ]
           outConstraints =
-            [ C.PaysPKWithDatum @Void pkh Nothing Nothing (buyerSellerTokens inst)
+            [ C.PaysPKWithDatum @() pkh Nothing Nothing (buyerSellerTokens inst <> W.minAda)
             ]
       _ <- validateTxConstrLbl ReclaimTx (misc C.:=>: outConstraints)
       pure ()

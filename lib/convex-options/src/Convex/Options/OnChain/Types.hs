@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DerivingStrategies    #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
@@ -33,17 +34,30 @@ import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Value qualified as V
 import PlutusTx qualified
+import PlutusTx.Eq qualified as PlutusTx
 import PlutusTx.Prelude
 import Prelude qualified
 
 data OptionType = Put | Call
-  deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
+  deriving stock (Prelude.Show, Generic, Prelude.Eq)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Eq OptionType where
+  Put == Put = True
+  Call == Call = True
+  _ == _ = False
 
 PlutusTx.makeLift ''OptionType
 PlutusTx.makeIsDataIndexed ''OptionType [('Put,0), ('Call, 1)]
 
 data OptionState = Ready | Exercised
-  deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
+  deriving stock (Prelude.Show, Generic, Prelude.Eq)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Eq OptionState where
+  Ready == Ready = True
+  Exercised == Exercised = True
+  _ == _ = False
 
 PlutusTx.makeLift ''OptionState
 PlutusTx.makeIsDataIndexed ''OptionState [('Ready,0), ('Exercised, 1)]
@@ -61,7 +75,21 @@ data Option =
     , opSellerTN         :: !TokenName -- ^ Token name for the SELLER token
     , opUtxoTN           :: !TokenName -- ^ Token name for the UTXO marker
     }
-    deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
+  deriving stock (Prelude.Show, Generic, Prelude.Eq)
+  deriving anyclass (FromJSON, ToJSON)
+
+instance Eq Option where
+  l == r =
+    opAsset l == opAsset r
+    && opAmount l == opAmount r
+    && opStrikePrice l == opStrikePrice r
+    && opDeposit l == opDeposit r
+    && opType l == opType r
+    && opDate l == opDate r
+    && opRedemptionPeriod l == opRedemptionPeriod r
+    && opBuyerTN l == opBuyerTN r
+    && opSellerTN l == opSellerTN r
+    && opUtxoTN l == opUtxoTN r
 
 PlutusTx.makeLift ''Option
 PlutusTx.makeIsDataIndexed ''Option [('Option,0)]
@@ -74,7 +102,14 @@ data OptionInstance =
     , oppState    :: !OptionState -- ^ Current state
     , oppCurrency :: !CurrencySymbol -- ^ Currency symbol of the buyer and seller tokens
     }
-    deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
+    deriving stock (Prelude.Show, Generic, Prelude.Eq)
+    deriving anyclass (FromJSON, ToJSON)
+
+instance PlutusTx.Eq OptionInstance where
+  l == r = 
+    oppOption l == oppOption r
+    && oppState l == oppState r
+    && oppCurrency l == oppCurrency r
 
 PlutusTx.makeLift ''OptionInstance
 PlutusTx.makeIsDataIndexed ''OptionInstance [('OptionInstance,0)]
@@ -119,7 +154,13 @@ reclaimInterval Option{opDate, opRedemptionPeriod} = Interval.from (opDate + POS
 data OptionRedeemer =
   Exercise -- ^ Exercise the option. Can be performed by the holder of the 'buyer' token
   | Reclaim -- ^ Reclaim the output. Can be performed by the holder of the 'seller' token
-  deriving (Prelude.Show, Generic, FromJSON, ToJSON, Prelude.Eq)
+    deriving stock (Prelude.Show, Generic, Prelude.Eq)
+    deriving anyclass (FromJSON, ToJSON)
+
+instance Eq OptionRedeemer where
+  Exercise == Exercise = True
+  Reclaim == Reclaim = True
+  _ == _ = False
 
 PlutusTx.makeLift ''OptionRedeemer
 PlutusTx.makeIsDataIndexed ''OptionRedeemer [('Exercise,0), ('Reclaim, 1)]

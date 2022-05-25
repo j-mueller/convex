@@ -56,4 +56,5 @@ option_reclaim =
 
 initialDist :: Option -> Wallet -> InitialDistribution
 initialDist Option{opAsset, opAmount} wallet =
-  W.initialDistribution' [(wallet, V.assetClassValue opAsset opAmount)]
+  let initVal = V.assetClassValue opAsset opAmount <> W.minAda
+  in W.initialDistribution' [(wallet, [initVal])]
