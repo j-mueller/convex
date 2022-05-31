@@ -6,11 +6,13 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE TemplateHaskell    #-}
+{-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 {-| Types for transactions that are dealt with by the wallet
 -}
 module Convex.Wallet.Transaction(
   -- * Signing transactions
   signTx,
+  signBalancedTx,
   -- * Tx processor state
   TxRequestId(..),
   TxProcessorState(..),
@@ -27,6 +29,7 @@ module Convex.Wallet.Transaction(
   processSpentTxIn,
   processTxInSpentEvent,
   balanceTx,
+  availableUtxos,
   -- * Tx state
   TxBodyState(..),
   TxBodyBalance(..),
@@ -44,8 +47,7 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.Lens (Lens', at, lens, makeLenses, over, use, view, (%=), (%~), (&), (.=), (.~), (<>~), (?=), (?~), (^.),
                      (|>))
 import Control.Monad (when)
-import Control.Monad.Except (MonadError, throwError)
-import Control.Monad.State (MonadState, gets)
+import Control.Monad.State (MonadState)
 import Control.Monad.Writer (MonadWriter, tell)
 import Convex.Wallet.Stats (Stats)
 import Convex.Wallet.Stats qualified as Stats
@@ -56,10 +58,10 @@ import Convex.Wallet.Utxos (UtxoState (..))
 import Data.Bifunctor (Bifunctor (..))
 import Data.Either (rights)
 import Data.List (sortOn)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
 import Data.Map.Strict (Map)
 import Data.Sequence (Seq)
-import Data.Sequence qualified as Seq
 import Data.Set (Set)
 
 signTx :: Wallet -> TxBody AlonzoEra -> Tx AlonzoEra
@@ -93,7 +95,6 @@ data PartialTxLogEntry =
   AddPublicKeyOutput (Address ShelleyAddr) C.Value
   | AddPublicKeyInput TxIn
   | AddCollateral TxIn
-  | AddSignature
 
 data PartialTx r =
   PartialTx
@@ -113,6 +114,7 @@ startBalancing PartialTx{ptxBodyContent, ptxUtxo} =
     , ptxBodyContentMod = ModBodyBalancing ptxBodyContent
     , ptxBalance        = TxBodyBalanceBalancing mempty
     , ptxFinalTx        = FinalTxBalancing
+    , ptxLog            = mempty
     }
 
 utxoL :: Lens' (PartialTx r) (Map TxIn Utils.TxOut)
@@ -183,7 +185,7 @@ addNonAdaChangeOutput addr ptx = do
 addAdaOnlyTxInput :: (TxIn, Utils.TxOut) -> PartialTx AdaOnlyBalance -> PartialTx AdaOnlyBalance
 addAdaOnlyTxInput (txIn, txOut) ptx =
   let lvl = C.selectLovelace (Utils.txOutValue txOut) in
-  ptx & bodyContentL' %~ (Utils.addKeyInput txIn txOut . Utils.addCollateral txIn)
+  ptx & bodyContentL' %~ (Utils.addKeyInput txIn . Utils.addCollateral txIn)
       & adaBalanceL <>~ lvl
       & addLogEntry (AddPublicKeyInput txIn)
       & addLogEntry (AddCollateral txIn)
@@ -216,8 +218,8 @@ balanceTxBody e w ptx = do
       addr = C.shelleyAddressInEra (Types.address bteNetworkId w)
   case C.makeTransactionBodyAutoBalance bteEra bteSystemStart bteEraHistory bteParams bteActivePools utxo bd addr keyWitnesses of
     Left err -> Left (FailedToBalance err)
-    Right bd ->
-      Right $ ptx{ptxBodyContentMod = ModBodyBalanced, ptxBalance = TxBodyBalanceBalanced, ptxFinalTx = FinalTxBalanced bd}
+    Right bd' ->
+      Right $ ptx{ptxBodyContentMod = ModBodyBalanced, ptxBalance = TxBodyBalanceBalanced, ptxFinalTx = FinalTxBalanced bd'}
 
 type PoolId = C.Hash StakePoolKey
 
@@ -280,6 +282,11 @@ enqueueTx rqId etx = do
   tell Stats.txnReceived -- ^ TODO: We should count this in the webserver when the tx first enters the system. Otherwise we might end up counting the transaction several times, if it gets dequeued and then enqueued again?
   -- TODO: Also add to pendingUtxos
 
+signBalancedTx :: Wallet -> PartialTx 'Balanced -> Tx AlonzoEra
+signBalancedTx w PartialTx{ptxFinalTx=FinalTxBalanced body} =
+  let C.BalancedTxBody bd _ _ = body
+  in signTx w bd
+
 data TxInSpentEvent = TxInSpentEvent{ tseTxIn :: TxIn, tseRequestId :: TxRequestId, tseSpendingTx :: TxId }
 
 {-| Process a spent transaction input
@@ -302,9 +309,9 @@ processTxInSpentEvent TxInSpentEvent{tseTxIn, tseRequestId, tseSpendingTx} = do
 -}
 data BalanceTxResult =
   EmptyQueue -- ^ No transactions in queue
-  | NotEnoughUTXOs TxRequestId -- ^ Not enough UTXOs to balance the transaction
-  | BalancingFailed TxRequestId -- ^ Balancing failed :(
-  | BalancedTx TxRequestId (PartialTx Balanced) -- ^ Transaction was dequeued and balanced
+  | NotEnoughUTXOs TxRequestId -- ^ Not enough UTXOs to balance the transaction. Tx stays in the queue
+  | BalancingFailed TxRequestId -- ^ Balancing failed :( Tx will not stay in the queue
+  | BalancedTx TxRequestId (PartialTx Balanced) -- ^ Transaction was dequeued and balanced, but has not been signed yet. Tx will not stay in the queue
 
 {-| Return the UTXOs that can be used for balancing a transaction.
 The UTXOs are
@@ -323,44 +330,36 @@ availableUtxos UtxoState{_walletUtxos} = do
 
 {-| Dequeue the first transaction and try to balance it.
 -}
-balanceTx :: MonadState TxQueueState m => Wallet -> UtxoState -> BalanceTxNodeEnv -> m BalanceTxResult
-balanceTx wallet@Wallet{wNonAdaReturnAddress} utxoState env@BalanceTxNodeEnv{bteParams, bteNetworkId, bteActivePools} = gets (Seq.viewl . _queuedTransactions) >>= \case
-  (requestId, exportTx) Seq.:< rest -> do
-    utxos_ <- availableUtxos utxoState
-    case utxos_ of
-      [] -> pure (NotEnoughUTXOs requestId)
-      (x:xs) -> do
-        let wipTx = startBalancing exportTx
-            txWithProtocolParams = over bodyContentL (Utils.setProtocolParams bteParams) wipTx
-            walletAddress        = Types.address bteNetworkId wallet
+balanceTx :: NonEmpty Utils.UTXO -> TxRequestId -> PartialTx Unbalanced -> Wallet -> BalanceTxNodeEnv -> [BalanceTxResult]
+balanceTx (x :| xs) requestId exportTx wallet@Wallet{wNonAdaReturnAddress} env@BalanceTxNodeEnv{bteParams, bteNetworkId, bteActivePools} =
+  let wipTx = startBalancing exportTx
+      txWithProtocolParams = over bodyContentL (Utils.setProtocolParams bteParams) wipTx
+      walletAddress        = Types.address bteNetworkId wallet
 
-            -- cand0 is preferred over cand1
-            cand0 =
-              let vl = C.lovelaceToValue 3_500_000
-              in txWithProtocolParams & bodyContentL %~ Utils.addPublicKeyOutput' walletAddress vl & addLogEntry (AddPublicKeyOutput walletAddress vl)
-            cand1 = txWithProtocolParams
+      -- cand0 is preferred over cand1
+      cand0 =
+        let vl = C.lovelaceToValue 3_500_000
+        in txWithProtocolParams & bodyContentL %~ Utils.addPublicKeyOutput' walletAddress vl & addLogEntry (AddPublicKeyOutput walletAddress vl)
+      cand1 = txWithProtocolParams
 
-            -- partial transactions with balance
-            candidatesWithBal :: [PartialTx Balancing]
-            candidatesWithBal =
-              let mkCandidate  =
-                    -- add dummy collateral and tx out to prevent certain 'TxBodyError's
-                    C.makeTransactionBody . Utils.addPublicKeyOutput walletAddress 0 . Utils.addCollateral (fst x) . view bodyContentL
-                  compBal partialTx body =
-                    let bal = fmap (C.evaluateTransactionBalance bteParams bteActivePools (utxos wipTx)) body
-                    in fmap (\b -> partialTx & balanceL .~ Utils.txOutValue' b) bal
-              in rights $ fmap (\cand -> compBal cand $ mkCandidate cand) [cand0, cand1]
+      -- partial transactions with balance
+      candidatesWithBal :: [PartialTx Balancing]
+      candidatesWithBal =
+        let mkCandidate  =
+              -- add dummy collateral and tx out to prevent certain 'TxBodyError's
+              C.makeTransactionBody . Utils.addPublicKeyOutput walletAddress 0 . Utils.addCollateral (fst x) . view bodyContentL
+            compBal partialTx body =
+              let bal = fmap (C.evaluateTransactionBalance bteParams bteActivePools (utxos wipTx)) body
+              in fmap (\b -> partialTx & balanceL .~ Utils.txOutValue' b) bal
+        in rights $ fmap (\cand -> compBal cand $ mkCandidate cand) [cand0, cand1]
 
-            candidatesWithNonAdaChangeAdded = rights $ addNonAdaChangeOutput wNonAdaReturnAddress <$> candidatesWithBal
+      candidatesWithNonAdaChangeAdded = rights $ addNonAdaChangeOutput wNonAdaReturnAddress <$> candidatesWithBal
 
-            -- now select ada inputs until the balance is positive
-            -- TODO: We could potentially improve the order of the generated candidates by using the logict package.
-            -- So that we could interleave candidates based on cand0 with those based on cand1.
-            -- By using [] we will generate all candidates for cand0 first.
-            candidatesWithInputs = candidatesWithNonAdaChangeAdded >>= addTxInputsToCoverBalance (x:xs)
+      -- now select ada inputs until the balance is positive
+      -- TODO: We could potentially improve the order of the generated candidates by using the logict package.
+      -- So that we could interleave candidates based on cand0 with those based on cand1.
+      -- By using [] we will generate all candidates for cand0 first.
+      candidatesWithInputs = candidatesWithNonAdaChangeAdded >>= addTxInputsToCoverBalance (x:xs)
 
-        -- try to balance the candidates until we find one that works
-        case rights (balanceTxBody env wallet <$> candidatesWithInputs) of
-          [] -> return (BalancingFailed requestId)
-          x:_ -> undefined -- TODO: Add signature
-  Seq.EmptyL -> pure EmptyQueue
+  -- try to balance the candidates until we find one that works
+  in BalancedTx requestId <$> rights (balanceTxBody env wallet <$> candidatesWithInputs)

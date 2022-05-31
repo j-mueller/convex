@@ -4,6 +4,7 @@
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TypeApplications   #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Convex.Wallet.ExportTx(
   ExportTx(..),
   ExportTxInput(..),
@@ -16,10 +17,10 @@ module Convex.Wallet.ExportTx(
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
+import Convex.Event (NewOutputEvent (..))
 import Data.Aeson (ToJSON (..), Value (String), object, (.=))
 import Data.Aeson.Extras qualified as JSON
 import Data.Maybe (mapMaybe)
-import Convex.Event (NewOutputEvent (..))
 import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 
 -- | Partial transaction that can be balanced by the wallet.

@@ -24,9 +24,7 @@ import Cardano.Api qualified as C
 import Cardano.Api.Shelley (TxBody (..))
 import Cardano.Api.Shelley qualified as CS
 import Cardano.Ledger.Address qualified as Address
-import Cardano.Ledger.Alonzo qualified as Alonzo
 import Cardano.Ledger.Alonzo.TxBody qualified as Alonzo.TxBody
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.TxIn qualified as CT
 import Control.Lens (makeLenses, makePrisms)
 import Convex.Wallet.Utils (TxOut)

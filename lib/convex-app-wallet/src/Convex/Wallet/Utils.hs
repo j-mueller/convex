@@ -2,7 +2,7 @@
 {-# LANGUAGE LambdaCase     #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE TupleSections  #-}
-
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 {-| Utilities for convex-app-wallet
 -}
 module Convex.Wallet.Utils(
@@ -17,7 +17,8 @@ module Convex.Wallet.Utils(
   addCollateral,
   setCollateral,
   setProtocolParams,
-  TxOut
+  TxOut,
+  UTXO
   ) where
 
 import Cardano.Api (Address, AlonzoEra, Block (..), BlockInMode (..), CardanoMode, EraInMode (AlonzoEraInCardanoMode),
@@ -31,8 +32,6 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.TxIn qualified as CT
 import Data.Bifunctor (Bifunctor (..))
 import Data.List (foldl')
-import Data.Map (Map)
-import Data.Map qualified as Map
 import Data.Set qualified as Set
 
 spentTxIns :: BlockInMode CardanoMode -> [(TxIn, TxId)]
@@ -54,14 +53,18 @@ txIns (Tx txBody _) =
 
 type TxOut = Alonzo.TxBody.TxOut (Alonzo.AlonzoEra StandardCrypto)
 
+type UTXO = (C.TxIn, TxOut)
+
 {-| The 'Value' of a tx out
 -}
 txOutValue :: Alonzo.TxBody.TxOut (Alonzo.AlonzoEra StandardCrypto) -> Value
 txOutValue x = case CS.fromShelleyTxOut CS.ShelleyBasedEraAlonzo x of
   CS.TxOut _ (CS.TxOutValue _ vl) _ -> vl
+  e                                 -> error $ "Convex.Wallet.Utils.txOutValue: " <> show e
 
 txOutValue' :: CS.TxOutValue AlonzoEra -> Value
 txOutValue' (CS.TxOutValue _ x) = x
+txOutValue' e                   = error $ "Convex.Wallet.Utils.txOutValue': " <> show e
 
 {-| Returns True if the 'Value' has any non-Ada (native) assets
 -}
@@ -73,16 +76,16 @@ hasNonAdaAssets v = case filter ((/= 0) . snd) (CS.valueToList v) of
 
 {-| Add an input spending a public-key output to the tx body
 -}
-addKeyInput :: TxIn -> TxOut -> TxBodyContent BuildTx AlonzoEra -> TxBodyContent BuildTx AlonzoEra
-addKeyInput txIn txOut content  =
+addKeyInput :: TxIn -> TxBodyContent BuildTx AlonzoEra -> TxBodyContent BuildTx AlonzoEra
+addKeyInput txIn content  =
   let oldTxIns = C.txIns content
       newTxIns = (txIn, C.BuildTxWith $ C.KeyWitness C.KeyWitnessForSpending) : oldTxIns
   in content{C.txIns = newTxIns}
 
 {-| Add some public key inputs to the tx body
 -}
-addKeyInputs :: TxBodyContent BuildTx AlonzoEra -> [(TxIn, TxOut)] -> TxBodyContent BuildTx AlonzoEra
-addKeyInputs = foldl' (\k (txIn, txOut) -> addKeyInput txIn txOut k)
+addKeyInputs :: TxBodyContent BuildTx AlonzoEra -> [TxIn] -> TxBodyContent BuildTx AlonzoEra
+addKeyInputs = foldl' (\k txIn -> addKeyInput txIn k)
 
 {-| Add a public key output with the given lovelace value to the tx body
 -}

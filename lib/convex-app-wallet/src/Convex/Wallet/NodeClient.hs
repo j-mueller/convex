@@ -12,7 +12,7 @@ module Convex.Wallet.NodeClient(
   walletClient
   ) where
 
-import Cardano.Api (AlonzoEra, Block (..), BlockInMode (..), BuildTx, CardanoMode, Env, TxBodyContent)
+import Cardano.Api (Block (..), BlockInMode (..), CardanoMode, Env)
 import Control.Concurrent.STM (TVar)
 import Control.Concurrent.STM qualified as STM
 import Control.Monad ((>=>))
@@ -34,7 +34,7 @@ import Convex.Wallet.Utxos qualified as Utxos
 import Data.Foldable (traverse_)
 import Data.Sequence (Seq)
 
-type Delta = Seq (TxRequestId, PartialTx Unbalanced)
+type Delta = Seq (TxRequestId, PartialTx 'Unbalanced)
 
 data WalletState =
   WalletState
