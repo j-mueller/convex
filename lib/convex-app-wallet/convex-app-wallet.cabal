@@ -27,6 +27,7 @@ library
         Convex.Wallet.Config
         Convex.Wallet.ExportTx
         Convex.Wallet.NodeClient
+        Convex.Wallet.NodeEnv
         Convex.Wallet.Stats
         Convex.Wallet.Transaction
         Convex.Wallet.Types

@@ -38,17 +38,16 @@ module Convex.Wallet.Transaction(
   PartialTx(..)
   ) where
 
-import Cardano.Api (Address, AlonzoEra, BuildTx, Lovelace, NetworkId, ShelleyAddr, Tx, TxBody, TxBodyContent, TxId,
+import Cardano.Api (Address, AlonzoEra, BuildTx, Lovelace, ShelleyAddr, Tx, TxBody, TxBodyContent, TxId,
                     TxIn)
 import Cardano.Api qualified as C
-import Cardano.Api.Shelley (ProtocolParameters, StakePoolKey)
 import Cardano.Api.Shelley qualified as C
-import Cardano.Slotting.Time (SystemStart)
 import Control.Lens (Lens', at, lens, makeLenses, over, use, view, (%=), (%~), (&), (.=), (.~), (<>~), (?=), (?~), (^.),
                      (|>))
 import Control.Monad (when)
 import Control.Monad.State (MonadState)
 import Control.Monad.Writer (MonadWriter, tell)
+import Convex.Wallet.NodeEnv (BalanceTxNodeEnv (..))
 import Convex.Wallet.Stats (Stats)
 import Convex.Wallet.Stats qualified as Stats
 import Convex.Wallet.Types (Wallet (..))
@@ -62,7 +61,6 @@ import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map qualified as Map
 import Data.Map.Strict (Map)
 import Data.Sequence (Seq)
-import Data.Set (Set)
 
 signTx :: Wallet -> TxBody AlonzoEra -> Tx AlonzoEra
 signTx Wallet{wKey} body = C.signShelleyTransaction body [C.WitnessPaymentKey wKey]
@@ -196,19 +194,6 @@ addTxInputsToCoverBalance txIns bd =
   filter ((>= 0) . view adaBalanceL)
   $ scanl (\bd' x -> addAdaOnlyTxInput x bd') bd txIns
 
-{-| Network information (available from cardano node)
--- TODO: NodeEnv -> IO BalanceTxNodeEnv
--}
-data BalanceTxNodeEnv =
-  BalanceTxNodeEnv
-    { bteEra         :: C.EraInMode C.AlonzoEra C.CardanoMode
-    , bteSystemStart :: SystemStart
-    , bteEraHistory  :: C.EraHistory C.CardanoMode
-    , bteParams      :: ProtocolParameters
-    , bteActivePools :: Set PoolId
-    , bteNetworkId   :: NetworkId
-    }
-
 balanceTxBody :: BalanceTxNodeEnv -> Wallet -> PartialTx AdaOnlyBalance -> Either FailureReason (PartialTx Balanced)
 balanceTxBody e w ptx = do
   let utxo = utxos ptx
@@ -220,8 +205,6 @@ balanceTxBody e w ptx = do
     Left err -> Left (FailedToBalance err)
     Right bd' ->
       Right $ ptx{ptxBodyContentMod = ModBodyBalanced, ptxBalance = TxBodyBalanceBalanced, ptxFinalTx = FinalTxBalanced bd'}
-
-type PoolId = C.Hash StakePoolKey
 
 newtype NumRetries = NumRetries{ getNumRetries :: Int }
   deriving stock (Eq, Ord, Show)
@@ -330,8 +313,8 @@ availableUtxos UtxoState{_walletUtxos} = do
 
 {-| Dequeue the first transaction and try to balance it.
 -}
-balanceTx :: NonEmpty Utils.UTXO -> TxRequestId -> PartialTx Unbalanced -> Wallet -> BalanceTxNodeEnv -> [BalanceTxResult]
-balanceTx (x :| xs) requestId exportTx wallet@Wallet{wNonAdaReturnAddress} env@BalanceTxNodeEnv{bteParams, bteNetworkId, bteActivePools} =
+balanceTx :: NonEmpty Utils.UTXO -> PartialTx Unbalanced -> Wallet -> BalanceTxNodeEnv -> [PartialTx 'Balanced]
+balanceTx (x :| xs) exportTx wallet@Wallet{wNonAdaReturnAddress} env@BalanceTxNodeEnv{bteParams, bteNetworkId, bteActivePools} =
   let wipTx = startBalancing exportTx
       txWithProtocolParams = over bodyContentL (Utils.setProtocolParams bteParams) wipTx
       walletAddress        = Types.address bteNetworkId wallet
@@ -362,4 +345,4 @@ balanceTx (x :| xs) requestId exportTx wallet@Wallet{wNonAdaReturnAddress} env@B
       candidatesWithInputs = candidatesWithNonAdaChangeAdded >>= addTxInputsToCoverBalance (x:xs)
 
   -- try to balance the candidates until we find one that works
-  in BalancedTx requestId <$> rights (balanceTxBody env wallet <$> candidatesWithInputs)
+  in rights (balanceTxBody env wallet <$> candidatesWithInputs)

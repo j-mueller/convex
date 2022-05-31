@@ -11,8 +11,11 @@ import Convex.Wallet.Command (CliCommand (..))
 import Convex.Wallet.Command qualified as Command
 import Convex.Wallet.Config (Config (..), ConfigMode (..))
 import Convex.Wallet.Config qualified as Config
+import Convex.Wallet.NodeEnv (BalanceTxNodeEnv (..))
+import Convex.Wallet.NodeEnv qualified as NodeEnv
 import Convex.Wallet.Types (Wallet (..))
 import Convex.Wallet.Types qualified as T
+import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Options.Applicative (customExecParser, disambiguate, helper, idm, info, prefs, showHelpOnEmpty, showHelpOnError)
@@ -25,9 +28,10 @@ runMain = do
                 (info (helper <*> Command.commandParser) idm)
   result <- runExceptT $ do
     case command of
-      GenerateKey        -> generateKey
-      RunWallet config   -> getConfig config >>= runWallet
-      ShowAddress config -> getConfig config >>= showAddress
+      GenerateKey          -> generateKey
+      RunWallet config     -> getConfig config >>= runWallet
+      ShowAddress config   -> getConfig config >>= showAddress
+      ConnectToNode config -> getConfig config >>= connectToNode
   case result of
     Left err -> do
       putStrLn "Error in runNodeClient"
@@ -62,3 +66,17 @@ getConfig c = case Config.mkTyped c of
     putStrLn (show err)
     exitFailure
   Right k -> pure k
+
+connectToNode :: (MonadError C.InitialLedgerStateError m, MonadIO m) => Config 'Typed -> m ()
+connectToNode Config{cardanoNodeConfigFile, cardanoNodeSocket} = do
+  (connectInfo, _) <- loadConnectInfo cardanoNodeConfigFile cardanoNodeSocket
+  result <- liftIO (NodeEnv.getNodeEnv connectInfo)
+  case result of
+    Left err -> liftIO $ do
+      putStrLn (show err)
+      exitFailure
+    Right BalanceTxNodeEnv{bteEra, bteSystemStart, bteActivePools, bteNetworkId} -> liftIO $ do
+      putStrLn $ "Era:               " <> show bteEra
+      putStrLn $ "System start:      " <> show bteSystemStart
+      putStrLn $ "# of active pools: " <> show (Set.size bteActivePools)
+      putStrLn $ "Network ID:        " <> show bteNetworkId
