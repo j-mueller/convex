@@ -48,11 +48,12 @@ emptyWalletState = WalletState emptyTxQueueState mempty
 walletClient ::
   Env
   -> Wallet
+  -> TVar Stats
   -> TVar WalletStats
   -> TVar Delta
   -> TVar UtxoState
   -> PipelinedLedgerStateClient
-walletClient env wallet statsT deltaT _tv = foldClient' emptyWalletState env rollbackWallet' rollforwardWallet' where
+walletClient env wallet allStatsT statsT deltaT _tv = foldClient' emptyWalletState env rollbackWallet' rollforwardWallet' where
 
   rollbackWallet' _ delta oldState = do
     -- When rolling back we put the requests back into the queue
@@ -72,6 +73,8 @@ walletClient env wallet statsT deltaT _tv = foldClient' emptyWalletState env rol
       (newQueueState, stats) <- runWriterT $ flip execStateT _queueState $ do
         rollforwardWallet updatedState delta newBlock
       liftIO $ STM.atomically $ STM.modifyTVar' statsT (Stats.prepend (Stats.fromBlockHeader blockHeader stats))
+      liftIO $ STM.atomically $ STM.modifyTVar' allStatsT (<> stats)
+      liftIO $ STM.atomically $ STM.writeTVar _tv _utxoState
       return (delta, WalletState{_utxoState = updatedState, _queueState = newQueueState})
 
 rollforwardWallet :: (MonadState TxQueueState m, MonadWriter Stats m) => UtxoState -> Delta -> BlockInMode CardanoMode -> m ()

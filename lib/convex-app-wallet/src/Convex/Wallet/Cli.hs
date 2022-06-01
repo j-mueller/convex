@@ -3,18 +3,26 @@
 module Convex.Wallet.Cli(runMain) where
 
 import Cardano.Api qualified as C
+import Cardano.Api qualified as CAPI
+import Control.Concurrent (forkIO)
+import Control.Concurrent.STM qualified as STM
+import Control.Monad (void)
 import Control.Monad.Except (MonadError (..))
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Trans.Except (runExceptT)
+import Convex.NodeClient qualified as NC
 import Convex.NodeClient.Types (loadConnectInfo)
 import Convex.Wallet.Command (CliCommand (..))
 import Convex.Wallet.Command qualified as Command
 import Convex.Wallet.Config (Config (..), ConfigMode (..))
 import Convex.Wallet.Config qualified as Config
+import Convex.Wallet.NodeClient qualified as NC
 import Convex.Wallet.NodeEnv (BalanceTxNodeEnv (..))
 import Convex.Wallet.NodeEnv qualified as NodeEnv
+import Convex.Wallet.Stats (emptyStats)
 import Convex.Wallet.Types (Wallet (..))
 import Convex.Wallet.Types qualified as T
+import Convex.Wallet.Webserver (ServerArgs (..), startServer)
 import Data.Set qualified as Set
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
@@ -45,9 +53,23 @@ generateKey = liftIO $ do
   key <- C.generateSigningKey C.AsPaymentKey
   Text.putStrLn (C.serialiseToBech32 key)
 
-runWallet :: MonadIO m => Config 'Typed -> m ()
-runWallet _ =
-  pure ()
+runWallet :: (MonadError C.InitialLedgerStateError m, MonadIO m) => Config 'Typed -> m ()
+runWallet Config{cardanoNodeConfigFile, cardanoNodeSocket, walletKey, nonAdaReturnAddress} = do
+  let wllt = Wallet{wKey = walletKey, wNonAdaReturnAddress = nonAdaReturnAddress}
+  utxos <- liftIO (STM.newTVarIO mempty)
+  delta <- liftIO (STM.newTVarIO mempty)
+  stats <- liftIO (STM.newTVarIO emptyStats)
+  allStats <- liftIO (STM.newTVarIO mempty)
+  void $ liftIO $ forkIO $ startServer ServerArgs{svUtxo = utxos, svPort = 8080, svWalletStats = stats, svAllStats = allStats}
+  let client _connectInfo env = do
+        pure (NC.walletClient env wllt allStats stats delta utxos)
+  result <- liftIO $ runExceptT (NC.runNodeClient cardanoNodeConfigFile cardanoNodeSocket client)
+  case result of
+    Left err -> liftIO $ do
+      putStrLn "Error in runNodeClient"
+      putStrLn (Text.unpack $ CAPI.renderInitialLedgerStateError err)
+    Right () -> do
+      liftIO $ putStrLn "runNodeClient successful."
 
 showAddress :: (MonadError C.InitialLedgerStateError m, MonadIO m) => Config 'Typed -> m ()
 showAddress Config{nonAdaReturnAddress, walletKey, cardanoNodeConfigFile, cardanoNodeSocket} = do
