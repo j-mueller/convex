@@ -69,7 +69,8 @@ library
         http-types -any,
         validation -any,
         transformers -any,
-        warp -any
+        warp -any,
+        prettyprinter -any
 
 executable convex-app-wallet
     import: lang
