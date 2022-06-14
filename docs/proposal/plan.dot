@@ -1,0 +1,81 @@
+// style from https://github.com/sisayie/pertchart
+digraph g {
+	node [height=.1 shape=Mrecord]
+	rankdir=LR
+	node [shape=record color=red fillcolor=grey93 style=filled]
+	"1.1" [label="<f0>Specify the prediction market contract |{0|1|1}|<f2>JM" ]
+	"1.2" [label="<f0>Specify the $CONVEX monetary policy script |{0|1|1}|<f2>JM" ]
+	"2.1" [label="<f0>Implement the prediction market contract |{0|1|1}|<f2>JM" ]
+	"2.2" [label="<f0>Implement the $CONVEX monetary policy script |{0|1|1}|<f2>JM" ]
+	"2.3" [label="<f0>Write unit tests |{0|1|1}|<f2>JM" ]
+	"2.4" [label="<f0>Write state machine based property tests |{0|1|1}|<f2>JM"]
+	"3.1" [label="<f0>Define web server API |{0|1|1}|<f2>JM"]
+	"3.2" [label="<f0>Implement web server API |{0|1|1}|<f2>JM"]
+	"3.3" [label="<f0>Add instrumentation / monitoring |{0|1|1}|<f2>JM"]
+	"4.1" [label="<f0>Find a capable UI/UX designer |{0|1|1}|<f2>JM"]
+	"4.2" [label="<f0>Sketch the interactions that should be possible in V1 |{0|1|1}|<f2>JM"]
+	"4.3" [label="<f0>Design UI based on specification |{0|1|1}|<f2>UI"]
+	"5.1" [label="<f0>Implement UI |{0|1|1}|<f2>UI"]
+	"5.2" [label="<f0>Integrate UI into main repo |{0|1|1}|<f2>UI"]
+	"6.1" [label="<f0>Build a testing mode backend |{0|1|1}|<f2>JM"]
+	"6.2" [label="<f0>Find users for UI test |{0|1|1}|<f2>JM/UI"]
+	"6.3" [label="<f0>Deploy testing mode backend |{0|1|1}|<f2>JM/UI"]
+	"6.4" [label="<f0>Document tasks for UI test |{0|1|1}|<f2>JM/UI"]
+	"6.5" [label="<f0>Run through UI test |{0|1|1}|<f2>test users"]
+	"7.1" [label="<f0>Deploy app on testnet |{0|1|1}|<f2>JM"]
+	"8.1" [label="<f0>Collect feedback from users |{0|1|1}|<f2>UI"]
+	"9.1" [label="<f0>Decide on final UI |{0|1|1}|<f2>JM/UI"]
+	"9.2" [label="<f0>Implement final UI |{0|1|1}|<f2>UI"]
+	"10.1" [label="<f0>Specify end2end test scenarios |{0|1|1}|<f2>JM"]
+	"10.2" [label="<f0>Execute end2end test scenarios |{0|1|1}|<f2>JM"]
+	"11.1" [label="<f0>Deploy on mainnet |{0|1|1}|<f2>JM"]
+	"12.1" [label="<f0>Ask certification providers for quotes |{0|1|1}|<f2>JM"]
+	"12.2" [label="<f0>Choose cert. provider |{0|1|1}|<f2>JM"]
+	"12.3" [label="<f0>Certify on-chain contracts |{0|1|1}|<f2>Cert. provider"]
+	"12.4" [label="<f0>Implement changes from certification |{0|1|1}|<f2>JM"]
+	"13.1" [label="<f0>Update mainnet deployment for v1 |{0|1|1}|<f2>JM"]
+	START -> "1.1"
+	START -> "1.2"
+	"1.1" -> "2.1"
+	"1.2" -> "2.2"
+	"2.2" -> "2.3"
+	"2.1" -> "2.3"
+	"2.3" -> "2.4"
+	"1.1" -> "3.1"
+	"1.2" -> "3.1"
+	"3.1" -> "3.2"
+	"2.1" -> "3.2"
+	"2.2" -> "3.2"
+	"3.2" -> "3.3"
+	START -> "4.1"
+	"3.1" -> "4.2"
+	"4.2" -> "4.3"
+	"4.1" -> "4.3"
+	"4.3" -> "5.1"
+	"5.1" -> "5.2"
+	"3.1" -> "6.1"
+	START -> "6.2"
+	"6.1" -> "6.3"
+	"4.2" -> "6.4"
+	"6.4" -> "6.5"
+	"6.2" -> "6.5"
+	"6.3" -> "6.5"
+	"3.3" -> "7.1"
+	"5.2" -> "7.1"
+	"7.1" -> "8.1"
+	"6.5" -> "8.1"
+	"8.1" -> "9.1"
+	"9.1" -> "9.2"
+	"9.2" -> "10.1"
+	"10.1" -> "10.2"
+	"10.2" -> "11.1"
+	"2.4" -> "11.1"
+	"2.1" -> "12.1"
+	"2.2" -> "12.1"
+	"12.1" -> "12.2"
+	"12.2" -> "12.3"
+	"12.3" -> "12.4"
+	"12.4" -> "13.1"
+	"11.1" -> "13.1"
+	"13.1" -> "V1"
+}
