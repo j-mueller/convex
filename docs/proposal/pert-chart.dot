@@ -1,0 +1,77 @@
+digraph 
+{
+node [shape=Mrecord]
+rankdir=LR
+  node [color="darkgray" fillcolor="grey93" style="filled" height=".1" shape="record"]
+  "TaskID 0" [label="Specify the prediction market contract|{1.0d|2.0d|3.0d}|CP: 0.1%"]
+  "TaskID 1" [label="Specify the $CONVEX monetary policy script|{1.0d|2.0d|5.0d}|CP: 0.0%"]
+  "TaskID 2" [label="Implement the prediction market contract|{1.0d|2.0d|5.0d}|CP: 0.1%"]
+  "TaskID 3" [label="Implement the $CONVEX monetary policy script|{1.0d|2.0d|5.0d}|CP: 0.0%"]
+  "TaskID 4" [label="Write unit tests|{2.0d|3.0d|5.0d}|CP: 0.0%"]
+  "TaskID 5" [label="Write unit tests|{3.0d|5.0d|8.0d}|CP: 0.0%"]
+  "TaskID 6" [label="Define web server API|{1.0d|1.0d|2.0d}|CP: 0.0%"]
+  "TaskID 7" [label="Implement web server API|{1.0d|1.0d|2.0d}|CP: 0.0%"]
+  "TaskID 8" [label="Add instrumentation / monitoring|{2.0d|3.0d|5.0d}|CP: 0.0%"]
+  "TaskID 9" [label="Find a capable UI/UX designer|{3.0d|8.0d|20.0d}|CP: 99.9%"]
+  "TaskID 10" [label="Sketch the interactions that should be possible in V1|{1.0d|2.0d|5.0d}|CP: 99.9%"]
+  "TaskID 11" [label="Design UI based on specification|{5.0d|10.0d|25.0d}|CP: 99.9%"]
+  "TaskID 12" [label="Implement UI|{5.0d|12.0d|20.0d}|CP: 99.9%"]
+  "TaskID 13" [label="Integrate UI into main repo|{1.0d|2.0d|3.0d}|CP: 99.9%"]
+  "TaskID 14" [label="Build a testing mode backend|{2.0d|3.0d|4.0d}|CP: 0.0%"]
+  "TaskID 15" [label="Find users for UI test|{1.0d|4.0d|8.0d}|CP: 0.0%"]
+  "TaskID 16" [label="Deploy testing mode backend|{1.0d|2.0d|3.0d}|CP: 0.0%"]
+  "TaskID 17" [label="Document tasks for UI test|{1.0d|2.0d|4.0d}|CP: 0.0%"]
+  "TaskID 18" [label="Run through UI test|{2.0d|4.0d|6.0d}|CP: 0.0%"]
+  "TaskID 19" [label="Deploy app on testnet|{1.0d|2.0d|3.0d}|CP: 99.9%"]
+  "TaskID 20" [label="Collect feedback from users|{3.0d|5.0d|10.0d}|CP: 99.9%"]
+  "TaskID 21" [label="Decide on final UI|{2.0d|6.0d|8.0d}|CP: 99.9%"]
+  "TaskID 22" [label="Implement final UI|{5.0d|10.0d|15.0d}|CP: 99.9%"]
+  "TaskID 23" [label="Specify end2end test scenarios|{1.0d|2.0d|3.0d}|CP: 99.9%"]
+  "TaskID 24" [label="Execute end2end test scenarios|{2.0d|4.0d|6.0d}|CP: 99.9%"]
+  "TaskID 25" [label="Bug fixes|{1.0d|4.0d|8.0d}|CP: 99.9%"]
+  "TaskID 26" [label="Deploy on mainnet|{1.0d|2.0d|4.0d}|CP: 99.9%"]
+  "TaskID 27" [label="Ask certification providers for quotes|{5.0d|10.0d|20.0d}|CP: 0.1%"]
+  "TaskID 28" [label="Choose cert. provider|{1.0d|1.5d|2.0d}|CP: 0.1%"]
+  "TaskID 29" [label="Certify on-chain contracts|{10.0d|20.0d|40.0d}|CP: 0.1%"]
+  "TaskID 30" [label="Implement changes from certification|{5.0d|8.0d|12.0d}|CP: 0.1%"]
+  "TaskID 31" [label="Update mainnet deployment for v1|{2.0d|3.0d|4.0d}|CP: 100.%"]
+  "TaskID 0" -> "TaskID 2"
+  "TaskID 0" -> "TaskID 6"
+  "TaskID 0" -> "TaskID 7"
+  "TaskID 1" -> "TaskID 3"
+  "TaskID 1" -> "TaskID 6"
+  "TaskID 1" -> "TaskID 7"
+  "TaskID 2" -> "TaskID 4"
+  "TaskID 2" -> "TaskID 27"
+  "TaskID 3" -> "TaskID 4"
+  "TaskID 3" -> "TaskID 27"
+  "TaskID 4" -> "TaskID 5"
+  "TaskID 5" -> "TaskID 26"
+  "TaskID 6" -> "TaskID 7"
+  "TaskID 6" -> "TaskID 14"
+  "TaskID 7" -> "TaskID 8"
+  "TaskID 8" -> "TaskID 19"
+  "TaskID 9" -> "TaskID 10"
+  "TaskID 10" -> "TaskID 11"
+  "TaskID 10" -> "TaskID 17"
+  "TaskID 11" -> "TaskID 12"
+  "TaskID 12" -> "TaskID 13"
+  "TaskID 13" -> "TaskID 19"
+  "TaskID 15" -> "TaskID 16"
+  "TaskID 15" -> "TaskID 18"
+  "TaskID 16" -> "TaskID 18"
+  "TaskID 17" -> "TaskID 18"
+  "TaskID 18" -> "TaskID 20"
+  "TaskID 19" -> "TaskID 20"
+  "TaskID 20" -> "TaskID 21"
+  "TaskID 21" -> "TaskID 22"
+  "TaskID 22" -> "TaskID 23"
+  "TaskID 23" -> "TaskID 24"
+  "TaskID 24" -> "TaskID 25"
+  "TaskID 25" -> "TaskID 26"
+  "TaskID 26" -> "TaskID 31"
+  "TaskID 27" -> "TaskID 28"
+  "TaskID 28" -> "TaskID 29"
+  "TaskID 29" -> "TaskID 30"
+  "TaskID 30" -> "TaskID 31"
+}

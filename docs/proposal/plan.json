@@ -1,0 +1,387 @@
+[
+  {
+    "name": "Specify the prediction market contract",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 3
+    },
+    "key": "1.1"
+  },
+  {
+    "name": "Specify the $CONVEX monetary policy script",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 5
+    },
+    "key": "1.2"
+  },
+  {
+    "name": "Implement the prediction market contract",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 5
+    },
+    "depends": [
+      "1.1"
+    ],
+    "key": "2.1"
+  },
+  {
+    "name": "Implement the $CONVEX monetary policy script",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 5
+    },
+    "depends": [
+      "1.2"
+    ],
+    "key": "2.2"
+  },
+  {
+    "name": "Write unit tests",
+    "estimate": {
+      "min": 2,
+      "mode": 3,
+      "max": 5
+    },
+    "depends": [
+      "2.1",
+      "2.2"
+    ],
+    "key": "2.3"
+  },
+  {
+    "name": "Write unit tests",
+    "estimate": {
+      "min": 3,
+      "mode": 5,
+      "max": 8
+    },
+    "depends": [
+      "2.3"
+    ],
+    "key": "2.4"
+  },
+  {
+    "name": "Define web server API",
+    "estimate": {
+      "min": 1,
+      "mode": 1,
+      "max": 2
+    },
+    "key": "3.1",
+    "depends": [
+      "1.1",
+      "1.2"
+    ]
+  },
+  {
+    "name": "Implement web server API",
+    "estimate": {
+      "min": 1,
+      "mode": 1,
+      "max": 2
+    },
+    "key": "3.2",
+    "depends": [
+      "1.1",
+      "1.2",
+      "3.1"
+    ]
+  },
+  {
+    "name": "Add instrumentation / monitoring",
+    "estimate": {
+      "min": 2,
+      "mode": 3,
+      "max": 5
+    },
+    "key": "3.3",
+    "depends": [
+      "3.2"
+    ]
+  },
+  {
+    "name": "Find a capable UI/UX designer",
+    "estimate": {
+      "min": 3,
+      "mode": 8,
+      "max": 20
+    },
+    "key": "4.1",
+    "depends": []
+  },
+  {
+    "name": "Sketch the interactions that should be possible in V1",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 5
+    },
+    "key": "4.2",
+    "depends": [
+      "4.1"
+    ]
+  },
+  {
+    "name": "Design UI based on specification",
+    "estimate": {
+      "min": 5,
+      "mode": 10,
+      "max": 25
+    },
+    "key": "4.3",
+    "depends": [
+      "4.2"
+    ]
+  },
+  {
+    "name": "Implement UI",
+    "estimate": {
+      "min": 5,
+      "mode": 12,
+      "max": 20
+    },
+    "key": "5.1",
+    "depends": [
+      "4.3"
+    ]
+  },
+  {
+    "name": "Integrate UI into main repo",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 3
+    },
+    "key": "5.2",
+    "depends": [
+      "5.1"
+    ]
+  },
+  {
+    "name": "Build a testing mode backend",
+    "estimate": {
+      "min": 2,
+      "mode": 3,
+      "max": 4
+    },
+    "key": "6.1",
+    "depends": [
+      "3.1"
+    ]
+  },
+  {
+    "name": "Find users for UI test",
+    "estimate": {
+      "min": 1,
+      "mode": 4,
+      "max": 8
+    },
+    "key": "6.2",
+    "depends": []
+  },
+  {
+    "name": "Deploy testing mode backend",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 3
+    },
+    "key": "6.3",
+    "depends": [
+      "6.2"
+    ]
+  },
+  {
+    "name": "Document tasks for UI test",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 4
+    },
+    "key": "6.4",
+    "depends": [
+      "4.2"
+    ]
+  },
+  {
+    "name": "Run through UI test",
+    "estimate": {
+      "min": 2,
+      "mode": 4,
+      "max": 6
+    },
+    "key": "6.5",
+    "depends": [
+      "6.4",
+      "6.2",
+      "6.3"
+    ]
+  },
+  {
+    "name": "Deploy app on testnet",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 3
+    },
+    "key": "7.1",
+    "depends": [
+      "3.3",
+      "5.2"
+    ]
+  },
+  {
+    "name": "Collect feedback from users",
+    "estimate": {
+      "min": 3,
+      "mode": 5,
+      "max": 10
+    },
+    "key": "8.1",
+    "depends": [
+      "7.1",
+      "6.5"
+    ]
+  },
+  {
+    "name": "Decide on final UI",
+    "estimate": {
+      "min": 2,
+      "mode": 6,
+      "max": 8
+    },
+    "key": "9.1",
+    "depends": [
+      "8.1"
+    ]
+  },
+  {
+    "name": "Implement final UI",
+    "estimate": {
+      "min": 5,
+      "mode": 10,
+      "max": 15
+    },
+    "key": "9.2",
+    "depends": [
+      "9.1"
+    ]
+  },
+  {
+    "name": "Specify end2end test scenarios",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 3
+    },
+    "key": "10.1",
+    "depends": [
+      "9.2"
+    ]
+  },
+  {
+    "name": "Execute end2end test scenarios",
+    "estimate": {
+      "min": 2,
+      "mode": 4,
+      "max": 6
+    },
+    "key": "10.2",
+    "depends": [
+      "10.1"
+    ]
+  },
+  {
+    "name": "Bug fixes",
+    "estimate": {
+      "min": 1,
+      "mode": 4,
+      "max": 8
+    },
+    "key": "10.3",
+    "depends": [
+      "10.2"
+    ]
+  },
+  {
+    "name": "Deploy on mainnet",
+    "estimate": {
+      "min": 1,
+      "mode": 2,
+      "max": 4
+    },
+    "key": "11.1",
+    "depends": [
+      "10.3",
+      "2.4"
+    ]
+  },
+  {
+    "name": "Ask certification providers for quotes",
+    "estimate": {
+      "min": 5,
+      "mode": 10,
+      "max": 20
+    },
+    "key": "12.1",
+    "depends": [
+      "2.1",
+      "2.2"
+    ]
+  },
+  {
+    "name": "Choose cert. provider",
+    "estimate": {
+      "min": 1,
+      "mode": 1.5,
+      "max": 2
+    },
+    "key": "12.2",
+    "depends": [
+      "12.1"
+    ]
+  },
+  {
+    "name": "Certify on-chain contracts",
+    "estimate": {
+      "min": 10,
+      "mode": 20,
+      "max": 40
+    },
+    "key": "12.3",
+    "depends": [
+      "12.2"
+    ]
+  },
+  {
+    "name": "Implement changes from certification",
+    "estimate": {
+      "min": 5,
+      "mode": 8,
+      "max": 12
+    },
+    "key": "12.4",
+    "depends": [
+      "12.3"
+    ]
+  },
+  {
+    "name": "Update mainnet deployment for v1",
+    "estimate": {
+      "min": 2,
+      "mode": 3,
+      "max": 4
+    },
+    "key": "13.1",
+    "depends": [
+      "12.4",
+      "11.1"
+    ]
+  }
+]
